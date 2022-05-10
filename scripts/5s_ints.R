@@ -27,6 +27,13 @@ scrdat$mean <- as.numeric(scrdat$mean)
 scrdat <- scrdat %>%
   arrange(id, time)
 
+unique(scrdat$id)
+
+# Data processing ####
+## EXCLUSIONS ####
+scrdat <- scrdat %>%
+  filter(id != 32 & id != 46) # issues with shock; fell asleep; respectively
+
 # we can't use data from before the 1st trial starts, so discard those
 scrdat <- scrdat %>% filter(time != "0:00:00.0")
 
@@ -92,7 +99,7 @@ outcome <- scrdat %>%
 
 scrdat<- left_join(scrdat, outcome)
 
-# get means for 2nd, 3rd, and 4th 5s interval (+ 5s for outcome) following choice ####
+## get means for 2nd, 3rd, and 4th 5s interval (+ 5s for outcome) following choice ####
   
 postchoice <- scrdat %>%
   group_by(id, trial) %>%
@@ -115,7 +122,7 @@ postchoice <- postchoice %>%
   rename(mean = meanInt) # rename column to match with rest of data; this df now contains raw SCL for each 5s interval during the 20s delay
 
 
-# get means for baseline ####
+## get means for baseline ####
 baseline <- scrdat %>%
   group_by(id, trial) %>%
   slice(c(1:2)) %>% # first 2 subtrials for each trial gives the baseline for that trial
@@ -150,73 +157,9 @@ cleaned <- cleaned %>% mutate(
 
 max(cleaned$mean_baselined)
 
-# check: baseline following SHOCK vs NOTHING ####
-
-tmp <- scrdat %>%
-  dplyr::select(c(id, mean, trial, subtrial, outcome, cat2)) %>%
-  group_by(id, trial) %>%
-  slice(-c(1:2)) %>%
-  ungroup()
-
-tmp2 <- baseline %>%
-  rename(mean = baseMean) %>%
-  mutate(subtrial = 0)
-  
-tmp <- rbind(tmp2, tmp)
-
-tmp <- tmp %>% arrange(id, trial, subtrial)
-
-baseAfterOut <- tmp %>% 
-  group_by(id) %>%
-  mutate(prevOutcome = lag(outcome)) %>%
-  dplyr::filter(subtrial == 0 & !is.na(prevOutcome)) %>%
-  ungroup() %>%
-  dplyr::select(-c(outcome)) 
-
-tmp <- baseAfterOut %>%
-  group_by(id, prevOutcome) %>%
-  summarise(mean = mean(mean))
-
-ggplot(tmp, aes(x=as.factor(prevOutcome), y=mean, group=prevOutcome, col=prevOutcome)) +
-  geom_boxplot() +
-  theme_bw() +
-  ylab("mean SCL (microsiemens)")
-
-# check: baseline following FONnothing vs FONshock vs KISnothing vs KISshock
-
-tmp <- scrdat %>%
-  dplyr::select(c(id, mean, trial, subtrial, outcome, cat2)) %>%
-  group_by(id, trial) %>%
-  slice(-c(1:2)) %>%
-  ungroup()
-
-tmp2 <- baseline %>%
-  rename(mean = baseMean) %>%
-  mutate(subtrial = 0)
-
-tmp <- rbind(tmp2, tmp)
-
-tmp <- tmp %>% arrange(id, trial, subtrial)
-
-baseAfterCat2 <- tmp %>% 
-  group_by(id) %>%
-  mutate(prevCat2 = lag(cat2)) %>%
-  dplyr::filter(subtrial == 0 & !is.na(prevCat2)) %>%
-  ungroup() %>%
-  dplyr::select(-c(cat2)) 
-
-tmp <- baseAfterCat2 %>%
-  group_by(id, prevCat2) %>%
-  summarise(mean = mean(mean))
-
-ggplot(tmp, aes(x=as.factor(prevCat2), y=mean, group=prevCat2, col=prevCat2)) +
-  geom_boxplot() +
-  theme_bw() +
-  ylab("mean SCL (microsiemens)")
-
 # plots ####
 
-# grouped by category -- not log transformed ####
+## grouped by category -- not log transformed ####
 
 catSummary_case1 <- cleaned %>%
   group_by(cat, subtrial) %>%
@@ -224,7 +167,7 @@ catSummary_case1 <- cleaned %>%
             mean = mean(mean_baselined)) %>%
   ungroup()
 
-catSummary_case2 <- cleaned %>%
+catSummary_case2 <- cleaned %>% # chosen method
   group_by(id, cat, subtrial) %>%
   summarise(mean = mean(mean_baselined)) %>%
   ungroup() %>%
@@ -251,7 +194,7 @@ int_plot <- ggplot(catSummary_case2,
 
 int_plot
 
-ggsave("plots/intPlot_cat_case1.pdf", width = 6.5, height = 4.8)
+# ggsave("plots/intPlot_cat_case2.pdf", width = 6.5, height = 4.8)
 
 # grouped by category, but with individual spaghetti lines
 ggplot(indSummary, aes(x=as.factor(subtrial), y=mean, group=interaction(cat, id), col=cat)) +
@@ -264,8 +207,8 @@ ggplot(indSummary, aes(x=as.factor(subtrial), y=mean, group=interaction(cat, id)
 
 #ggsave("plots/intPlot_ind_case1.pdf", width = 7.5, height = 6)
 
-# grouped by category2 (ie choice + outcome) -- not log transformed ####
-# 
+## grouped by category2 (ie choice + outcome) -- not log transformed ####
+
 catSummary_case1 <- cleaned %>% # case 1: group by conditions
   group_by(cat2, subtrial) %>%
   summarise(mean_sd = sd(mean_baselined),
@@ -299,7 +242,7 @@ int_plot <- ggplot(catSummary_case2,
 
 int_plot
 
-# ggsave("plots/intPlo_cat_allsep_case1.pdf", width = 6.5, height = 4.8)
+# ggsave("plots/intPlot_cat_allsep_case2.pdf", width = 6.5, height = 4.8)
 
 # grouped by category, but with individual spaghetti lines
 ggplot(indSummary, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, id), col=cat2)) +
@@ -312,9 +255,9 @@ ggplot(indSummary, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, id
 
 # ggsave("plots/intPlot_ind.pdf", width = 7.5, height = 6)
 
-# why is there a difference beteween KISshock and KISnothing?
+# why is there a difference beteween KISshock and KISnothing? ####
 
-# a) check people with highest prop KISnothing/KIS shock
+#### a) check people with highest prop KISnothing/KIS shock ####
 tmp <- cleaned %>%
   mutate(prevOutcome = lag(outcome)) %>%
   filter(subtrial == 3) %>%
@@ -324,6 +267,114 @@ tmp <- cleaned %>%
 tmp2 <- cleaned %>% filter(subtrial == 3) %>% group_by(id) %>% count(cat2)
 
 tmp <- left_join(tmp, tmp2)
+
+#### b) check: baseline following SHOCK vs NOTHING ####
+
+tmp <- scrdat %>%
+  dplyr::select(c(id, mean, trial, subtrial, outcome, cat2)) %>%
+  group_by(id, trial) %>%
+  slice(-c(1:2)) %>%
+  ungroup()
+
+tmp2 <- baseline %>%
+  rename(mean = baseMean) %>%
+  mutate(subtrial = 0)
+
+tmp <- rbind(tmp2, tmp)
+
+tmp <- tmp %>% arrange(id, trial, subtrial)
+
+baseAfterOut <- tmp %>% 
+  group_by(id) %>%
+  mutate(prevOutcome = lag(outcome)) %>%
+  dplyr::filter(subtrial == 0 & !is.na(prevOutcome)) %>%
+  ungroup() %>%
+  dplyr::select(-c(outcome)) 
+
+tmp <- baseAfterOut %>%
+  group_by(id, prevOutcome) %>%
+  summarise(mean = mean(mean))
+
+ggplot(tmp, aes(x=as.factor(prevOutcome), y=mean, group=prevOutcome, col=prevOutcome)) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("mean of current baseline (microsiemens)") +
+  xlab("outcome on previous trial")
+
+ggsave("plots/baseline_prevOutcome.pdf", width = 6.5, height = 4.8)
+
+#### c) check: baseline following FONnothing vs FONshock vs KISnothing vs KISshock ####
+
+tmp <- scrdat %>%
+  dplyr::select(c(id, mean, trial, subtrial, outcome, cat2)) %>%
+  group_by(id, trial) %>%
+  slice(-c(1:2)) %>%
+  ungroup()
+
+tmp2 <- baseline %>%
+  rename(mean = baseMean) %>%
+  mutate(subtrial = 0)
+
+tmp <- rbind(tmp2, tmp)
+
+tmp <- tmp %>% arrange(id, trial, subtrial)
+
+baseAfterCat2 <- tmp %>% 
+  group_by(id) %>%
+  mutate(prevCat2 = lag(cat2)) %>%
+  dplyr::filter(subtrial == 0 & !is.na(prevCat2)) %>%
+  ungroup() %>%
+  dplyr::select(-c(cat2)) 
+
+tmp <- baseAfterCat2 %>%
+  group_by(id, prevCat2) %>%
+  summarise(mean = mean(mean))
+
+ggplot(tmp, aes(x=as.factor(prevCat2), y=mean, group=prevCat2, col=prevCat2)) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("baseline (microsiemens)") +
+  xlab("previous trial type") 
+
+ggsave("plots/basline_prevCat.pdf", width = 6.5, height = 4.8) #note this is plot of subject means for each condition
+
+#### d) check: baseline for FONnothing vs FONshock vs KISnothing vs KISshock trials ####
+
+tmp <- baseline %>%
+  group_by(id, cat2) %>%
+  summarise(mean = mean(baseMean)) %>%
+  ungroup()
+
+means <- aggregate(mean ~  cat2, tmp, mean)
+
+ggplot(tmp, aes(x=as.factor(cat2), y=mean, group=cat2, col=cat2)) +
+  geom_boxplot() +
+  stat_summary(fun=mean, colour="darkred", geom="point", 
+               shape=18, size=3, show.legend=FALSE) + 
+  geom_text(data = means, aes(label = mean, y = mean+1.5))+ # y argument moves text up
+  geom_jitter()+
+  theme_bw() +
+  ylab("baseline (microsiemens)") +
+  xlab("current trial type") 
+
+ggsave("plots/baseline_currCat.pdf", width = 7.8, height = 4.8) #note this is plot of subject means for each condition
+
+## here we see that KISshock trials have the highest mean baseline - this possibly will lower the
+## raw SCL measure during intervals 1-5
+
+#### e) % shock vs nothing on PREVIOUS trial for each trial cat ####
+
+
+#### f) % shock vs nothing on CURRENT trial for each trial cat ####
+
+# further data exploration ####
+
+## behavioral KIS/FON preferences across blocks ####
+
+## does SCR diff between KIS and FON predict choosing FON on current trial?? ####
+
+## does trial category on previous trial predict choosing FON on current trial? ####
+
 # replicating helen's analysis with baselined data ####
 
 tmp <- scrdat %>%
