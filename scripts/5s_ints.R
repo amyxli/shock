@@ -162,13 +162,7 @@ max(cleaned$mean_baselined)
 
 ## grouped by category -- not log transformed ####
 
-catSummary_case1 <- cleaned %>%
-  group_by(cat, subtrial) %>%
-  summarise(mean_sd = sd(mean_baselined, na.rm=TRUE), # na rm for trial 1 which is not baselined
-            mean = mean(mean_baselined, na.rm=TRUE)) %>%
-  ungroup()
-
-catSummary_case2 <- cleaned %>% # chosen method
+catSummary <- cleaned %>% # chosen method
   group_by(id, cat, subtrial) %>%
   summarise(mean = mean(mean_baselined, na.rm=TRUE)) %>% # 
   ungroup() %>%
@@ -184,7 +178,7 @@ indSummary <- cleaned %>%
             mean = mean(mean_baselined, na.rm=TRUE)) %>%
   ungroup()
 
-int_plot <- ggplot(catSummary_case2,
+int_plot <- ggplot(catSummary,
                    aes(as.factor(subtrial), mean, group = cat, col = cat)) +
   geom_point(size = 3) +
   geom_line() +# +
@@ -195,28 +189,28 @@ int_plot <- ggplot(catSummary_case2,
 
 int_plot
 
-# ggsave("plots/intPlot_cat_case2.pdf", width = 6.5, height = 4.8)
+# ggsave("plots/intPlot_cat.pdf", width = 6.5, height = 4.8)
 
 # grouped by category, but with individual spaghetti lines
 ggplot(indSummary, aes(x=as.factor(subtrial), y=mean, group=interaction(cat, id), col=cat)) +
   geom_line(aes(alpha = 1)) +
-  geom_line(data = catSummary_case1, aes(alpha = 1, group=cat, col = cat), size = 1.4)+
-  geom_point(data = catSummary_case1, aes(alpha = 1, group=cat, col = cat), size = 3) +
+  geom_line(data = catSummary, aes(alpha = 1, group=cat, col = cat), size = 1.4)+
+  geom_point(data = catSummary, aes(alpha = 1, group=cat, col = cat), size = 3) +
   theme_bw() +
   scale_x_discrete("interval", labels = c("1", "2", "3", "4", "outcome")) +
   ylab("log change in SCL") 
 
-#ggsave("plots/intPlot_ind_case1.pdf", width = 7.5, height = 6)
+#ggsave("plots/intPlot_ind.pdf", width = 7.5, height = 6)
 
 ## grouped by category2 (ie choice + outcome) -- not log transformed ####
 
-catSummary_case1 <- cleaned %>% # case 1: group by conditions
+catSummary2 <- cleaned %>% # case 1: group by conditions
   group_by(cat2, subtrial) %>%
   summarise(mean_sd = sd(mean_baselined, na.rm=TRUE),
             mean = mean(mean_baselined, na.rm=TRUE)) %>%
   ungroup()
 
-catSummary_case2 <- cleaned %>%
+catSummary2 <- cleaned %>%
   group_by(id, cat2, subtrial) %>%  #case 2: group by participants then conditions
   summarise(mean = mean(mean_baselined, na.rm=TRUE)) %>%
   ungroup() %>%
@@ -226,13 +220,13 @@ catSummary_case2 <- cleaned %>%
   ungroup() 
   
 
-indSummary <- cleaned %>%
+indSummary2 <- cleaned %>%
   group_by(id, cat2, subtrial) %>%
   summarise(mean_sd = sd(mean_baselined, na.rm=TRUE),
             mean = mean(mean_baselined, na.rm=TRUE)) %>%
   ungroup()
 
-int_plot <- ggplot(catSummary_case2,
+int_plot2 <- ggplot(catSummary2,
                    aes(as.factor(subtrial), mean, group = cat2, col = cat2)) +
   geom_point(size = 3) +
   geom_line() +# +
@@ -241,15 +235,15 @@ int_plot <- ggplot(catSummary_case2,
   theme_bw() +
   scale_x_discrete("interval", labels = c("1", "2", "3", "4", "outcome")) 
 
-int_plot
+int_plot2
 
-# ggsave("plots/intPlot_cat_allsep_case2.pdf", width = 6.5, height = 4.8)
+# ggsave("plots/intPlot_cat_allsep.pdf", width = 6.5, height = 4.8)
 
 # grouped by category, but with individual spaghetti lines
-ggplot(indSummary, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, id), col=cat2)) +
+ggplot(indSummary2, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, id), col=cat2)) +
   geom_line(aes(alpha = 1)) +
-  geom_line(data = catSummary_case2, aes(alpha = 1, group=cat2, col = cat2), size = 1.4)+
-  geom_point(data = catSummary_case2, aes(alpha = 1, group=cat2, col = cat2), size = 3) +
+  geom_line(data = catSummary2, aes(alpha = 1, group=cat2, col = cat2), size = 1.4)+
+  geom_point(data = catSummary2, aes(alpha = 1, group=cat2, col = cat2), size = 3) +
   theme_bw() +
   scale_x_discrete("interval", labels = c("1", "2", "3", "4", "outcome")) +
   ylab("change in SCL") 
@@ -292,6 +286,7 @@ ggplot(tmp, aes(x=as.factor(prevOutcome), y=mean, group=prevOutcome, col=prevOut
   xlab("outcome on previous trial")
 
 #ggsave("plots/baseline_prevOutcome.pdf", width = 6.5, height = 4.8)
+# plot shows baseline elevated in trial following shock compared to nothing outcome
 
 #### b) check: baseline following FONnothing vs FONshock vs KISnothing vs KISshock ####
 
@@ -327,6 +322,7 @@ ggplot(tmp, aes(x=as.factor(prevCat2), y=mean, group=prevCat2, col=prevCat2)) +
   xlab("previous trial type") 
 
 #ggsave("plots/basline_prevCat.pdf", width = 6.5, height = 4.8) #note this is plot of subject means for each condition
+# plot shows that on aaverage, baseline highest after KISshock trial, followed by FONshock
 
 #### c) check: baseline for FONnothing vs FONshock vs KISnothing vs KISshock trials ####
 
@@ -347,67 +343,128 @@ ggplot(tmp, aes(x=as.factor(cat2), y=mean, group=cat2, col=cat2)) +
   ylab("baseline (microsiemens)") +
   xlab("current trial type") 
 
-ggsave("plots/baseline_currCat.pdf", width = 7.8, height = 4.8) #note this is plot of subject means for each condition
+#ggsave("plots/baseline_currCat.pdf", width = 7.8, height = 4.8) #note this is plot of subject means for each condition
+# baseline is highest for KISshock trials, followed by KISnothing, followed by FONshock then FONnothing
 
 ## here we see that KISshock trials have the highest mean baseline - this possibly will lower the
 ## raw SCL measure during intervals 1-5
 
 #### d) % shock vs nothing on PREVIOUS trial for each trial cat ####
 
-tmp <- cleaned %>%
+# we check this to see if KISshock trials have higher % previous shock trials vs nothing
+
+data_prevOutcome <- cleaned %>%
   group_by(id) %>%
-  mutate(prevOutcome = lag(outcome)) %>%
-  filter(subtrial == 3) 
+  mutate(prevOutcome = lag(outcome),
+         prevCat2 = lag(cat2)) %>%
+  filter(subtrial == 3) %>%
+  select(c(id, trial, cat, cat2, outcome, prevOutcome, prevCat2))
+
+
+### just as fyi see # of trials of each trial cat each subject experienced ####
+mean_trialcat <- data_prevOutcome %>%
+  group_by(id, cat2) %>%
+  summarise(count = n()) %>%
+  ungroup()
+
+means <- aggregate(count ~  cat2, mean_trialcat, mean) # find means 
+
+# cat2     count
+# 1 FONnothing 12.902439
+# 2   FONshock 13.785714
+# 3 KISnothing  7.763158
+# 4   KISshock  7.486486
+
+## on average people choose FON on  ~26/40 trials; and KIS on ~15/40 trials
+
+ggplot(mean_trialcat, aes(x=as.factor(cat2), y=count, group=cat2, col=cat2)) +
+  geom_boxplot() +
+  stat_summary(fun=mean, colour="darkred", geom="point", 
+               shape=18, size=3, show.legend=FALSE) + 
+  geom_text(data = means, aes(label = count, y = count+1.5))+ # y argument moves text up
+  geom_jitter()+
+  theme_bw() +
+  ylab("mean # trials") +
+  xlab("trial type")
 
 # now remove trial 1 because there is no prev trial data
-tmp <- tmp %>% filter(!is.na(prevOutcome))
+tmp <- data_prevOutcome %>% filter(!is.na(prevOutcome))
 
 # find prop shock vs nothing for each trial cat
-table(tmp$prevOutcome)
+# ... first count the number of trials belonging to each trial cat/prevOutcome
+# combination each subject had experienced
 
 tmp <- tmp %>%
   group_by(id, cat2, prevOutcome) %>%
   summarise(count = n()) %>%
   arrange(id, cat2, prevOutcome) %>%
-  ungroup()
+  ungroup() # this gives no. of trials for each cat2/prevoutcome combination per subject
 
 # add column with counts of number of trials of certain category, for calculating proportions
 tmp <- tmp %>%
   group_by(id, cat2) %>%
-  mutate(total = sum(count)) %>% 
+  mutate(total = sum(count)) %>% # total gives the total no. of trials for sub in each cat2 category 
   ungroup()
 
 tmp <- tmp %>%
-  mutate(prop = count/total)
+  mutate(prop = count/total) # gives prop of shock / total # trials for cat2
+                             # if KISshock has high baselines bc of mostly preceded by shock trials, we should be able to see this
+# in the above, props for each cat2 adds up to 1
+
+ggplot(tmp, aes(x=cat2, y=prop, group=interaction(cat2, prevOutcome), col=interaction(cat2, prevOutcome))) +
+  geom_boxplot() +
+  # stat_summary(fun=mean, position=position_nudge(x = 0.1, y = 0), colour="darkred", geom="point", 
+  #              shape=18, size=3, show.legend=FALSE) + 
+  geom_point(position = position_jitterdodge()) +
+  theme_bw() +
+  ylab("mean # trials") +
+  xlab("trial type")
 
 tmp %>%
   group_by(cat2, prevOutcome) %>%
   summarise(meanProp = mean(prop)) %>%
   ungroup()
+# essentially, the takeaway here is that trials of the type KISshock isn't more likely to be preceded by shock trials
+# in fact shows ~57.5% of KISshock trials preceded by nothing, ~51.1% preceded by shock
 
-#### e) % shock vs nothing on CURRENT trial for each trial cat ####
+#### e) % shock vs nothing on CURRENT trial for FON vs KIS ####
+
+# in hindsight I'm not sure how much sense this question makes
 
 #### f) mean number of successive shocks preceding.... ####
 
 # further data exploration ####
 
 ## behavioral KIS/FON preferences across blocks ####
+
 choiceData <- cleaned %>%
   select(id, trial, cat2, outcome) %>%
   unique() %>%
-  mutate(choice = substr(cat2, 1, 3)) %>%
-  select(-c(cat2))
+  mutate(choice = substr(cat2, 1, 3)) %>% # keep FON or KIS only
+  select(-c(cat2)) %>%
+  arrange(id, trial) %>%
+  group_by(id) %>%
+  mutate(block = rep(1:4, each = 10)) %>% # add block numbers
+  ungroup()
 
-choiceData %>%
-  group_by(id, choice, outcome) %>%
-  mutate(count = n())
+tmp <- choiceData %>%
+  group_by(id, block, choice, .drop=FALSE) %>% # not working
+  tally() %>%
+  ungroup()
 
-## does SCR diff between KIS and FON predict choosing FON on current trial?? ####
+tmp <- tmp %>%
+  filter(choice=="FON") %>%
+  select(-c(choice)) %>%
+  mutate(propFON = n/10)
 
-## does trial category on previous trial predict choosing FON on current trial? ####
+# TO DO: find a way to plot this!?
+ggplot(tmp, aes(x=block, y=propFON, group=as.factor(id), col=as.factor(id))) +
+  geom_line() +
+  facet_wrap(~id, ncol=3)
 
-# replicating helen's analysis with baselined data ####
+## does SCR diff between KIS and FON predict prop of KIS/FON choices?? ####
 
+# for each subject, we need mean baselined scr across 20s interval for KIS - mean baselined SCR across 20s interval for FON 
 tmp <- scrdat %>%
   dplyr::filter(label2 == "int4" | label2 == "outcome") #20s averaged period only
 
@@ -415,28 +472,92 @@ tmp <- tmp %>%
   mutate(label2 = case_when(
     label2 == "outcome" ~ "outcome",
     label2 == "int4" ~ "20s"
-))
+  ))
 
 tmp <- left_join(tmp, baseline)
 
 # now subtract baseMean from each mean for baselined data on each trial
-baselined <- tmp %>%
+baselined_20s <- tmp %>%
   mutate(mean_baselined = mean - baseMean)
 
-cleaned <- baselined %>% 
+cleaned_20s <- baselined_20s %>% 
   dplyr::select(id, trial, cat, outcome, subtrial, label2, mean, baseMean, mean_baselined) %>%
+  mutate(choice = substr(cat, 1, 3)) %>% # keep FON or KIS only
   rename(label = label2)
 
-tmp <- cleaned %>% dplyr::filter(label == "20s")
+cleaned_20s <- cleaned_20s %>% dplyr::filter(label == "20s") %>% filter(!is.na(mean_baselined))
 
-catSummary <- tmp %>%
-  group_by(cat, subtrial) %>%
+choice_scr <- cleaned_20s %>%
+  group_by(id, choice) %>%
   summarise(sd = sd(mean_baselined),
-            m = mean(mean_baselined), #mean in brackets reproduces helen's plots successfully
+            m = mean(mean_baselined),
             n = n()) %>%
   ungroup()
 
-ggplot(catSummary, aes(cat, m)) + 
+choice_scr_diff <- choice_scr %>%
+  group_by(id) %>%
+  mutate(lagm = lag(m)) %>%
+  ungroup() %>%
+  mutate(KIS_FON = m - lagm) %>% # difference between KIS mean baselined and FON
+  filter(!is.na(KIS_FON)) %>%
+  rename(nKIS = n) %>%
+  select(-c(choice, sd))
+
+# now get prop of FON choices and add as a column 
+choice_scr_diff <- choice_scr_diff %>%
+  mutate(propFON = (39-nKIS)/39) #out of 39 as only 39 trials had baselined means
+
+# does KIS-FON predict prop FON?
+mod1 <- lm(propFON ~ 1, choice_scr_diff)
+mod2 <- lm(propFON ~ KIS_FON, choice_scr_diff)
+summary(mod2) #ns
+anova(mod1, mod2)
+
+## does trial category on previous trial predict choosing FON on current trial? ####
+tmp <- data_prevOutcome %>%
+  mutate(choice = substr(cat, 1, 3)) %>%
+  filter(!is.na(prevOutcome))
+
+tmp$choice <- as.factor(tmp$choice)
+tmp$prevOutcome <- as.factor(tmp$prevOutcome)
+
+mod1<-glm(choice ~ 1, family = binomial, data = tmp)
+mod2<-glm(choice ~ prevOutcome, family = binomial, data = tmp)
+mod3<-glm(choice ~ prevOutcome + prevCat2, family = binomial, data = tmp)
+
+anova(mod1, mod2, mod3, test="Chisq") # ns for prevoutcome, sig for prevCat2
+
+## predictor of baselined SCR on current trial: FON/KIS vs outcome vs prevOutcome ####
+
+# add prevOutcome column to cleaned_20s which has the 20s mean scrs
+
+tmp <- data_prevOutcome %>% filter(!is.na(prevOutcome))
+cleaned_20s
+
+cleaned_20s <- right_join(cleaned_20s, tmp)
+# change to factors
+cleaned_20s$prevOutcome <- as.factor(cleaned_20s$prevOutcome)
+cleaned_20s$outcome <- as.factor(cleaned_20s$outcome)
+cleaned_20s$choice <- as.factor(cleaned_20s$choice)
+# make models with scr as dv
+
+library(lme4)
+mod1 <- lmer(mean_baselined ~ 1 + (1|id), data = cleaned_20s)
+mod2 <- lmer(mean_baselined ~ choice + (1|id), data = cleaned_20s)
+mod3 <- lmer(mean_baselined ~ choice + prevOutcome + (1|id), data = cleaned_20s)
+mod4 <- lmer(mean_baselined ~ choice + prevOutcome + cat2 + (1|id), data = cleaned_20s)
+
+anova(mod1, mod2, mod3, mod4)
+
+# replicating helen's analysis with baselined data ####
+catSummary_20s <- cleaned_20s %>%
+  group_by(cat, subtrial) %>%
+  summarise(sd = sd(mean_baselined),
+            m = mean(mean_baselined),
+            n = n()) %>%
+  ungroup()
+
+ggplot(catSummary_20s, aes(cat, m)) + 
   geom_bar(stat="identity") + 
   geom_errorbar(aes(ymin=m-sd/sqrt(n), ymax=m+sd/sqrt(n)), width=.05) + 
   labs(x="Choice", y="Mean SCR", title="SCR by Choice (averaged across trials)")
