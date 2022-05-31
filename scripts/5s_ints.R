@@ -1,5 +1,5 @@
 # created axl 18/03/22
-# last edited axl 22/05/22
+# last edited axl 29/05/22
 
 # libraries required
 library(tidyverse)
@@ -20,8 +20,10 @@ colnames(scrdat) <- c("id","time", "byte", "label", "mean") # rename columns
 scrdat <- scrdat %>%
   dplyr::filter(time != "" & time != "Cmt Time") # throw out the nonsense rows
 
-scrdat$id <- substring(scrdat$id, 71) # turn the file name into subject numbers; first leave [NUMBER].txt
-scrdat$id<- str_replace(scrdat$id, ".txt", "") # then remove the part that says ".txt" leaving us with the number only
+scrdat$id <- scrdat$id %>%
+  substring(75,) %>% 
+  str_remove('.txt') # then remove the part that says ".txt" leaving us with the number only
+
 
 scrdat$id <- as.numeric(scrdat$id)
 scrdat$mean <- as.numeric(scrdat$mean)
@@ -33,8 +35,8 @@ unique(scrdat$id)
 # Data processing ####
 ## EXCLUSIONS ####
 scrdat <- scrdat %>%
-  filter(id != 32 & id != 46) # issues with shock; fell asleep; respectively
-
+  filter(id != 32 & id != 46) %>% # issues with shock; fell asleep; respectively
+  filter(id != 11 & id != 18 & id != 25 & id != 27 & id != 38 & id != 43) # had no trials of at least 1/4 trial categories
 # we can't use data from before the 1st trial starts, so discard those
 scrdat <- scrdat %>% filter(time != "0:00:00.0")
 
@@ -237,9 +239,9 @@ int_plot2 <- ggplot(catSummary2,
 
 int_plot2
 
-# ggsave("plots/intPlot_cat_allsep.pdf", width = 6.5, height = 4.8)
+# ggsave("plots/intervals_cat2.pdf", width = 6.5, height = 4.8)
 
-# grouped by category, but with individual spaghetti lines
+# grouped by category, but with individual spaghetti lines (overlaid)
 ggplot(indSummary2, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, id), col=cat2)) +
   geom_line(aes(alpha = 1)) +
   geom_line(data = catSummary2, aes(alpha = 1, group=cat2, col = cat2), size = 1.4)+
@@ -247,8 +249,15 @@ ggplot(indSummary2, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, i
   theme_bw() +
   scale_x_discrete("interval", labels = c("1", "2", "3", "4", "outcome")) +
   ylab("change in SCL") 
+# split individual lines into facets
+ggplot(indSummary2, aes(x=as.factor(subtrial), y=mean, group=interaction(cat2, id), col=cat2)) +
+  geom_line() +
+  scale_x_discrete("interval", labels = c("1", "2", "3", "4", "outcome")) +
+  ylab("change in SCL") +
+  facet_wrap(~id, ncol=6) +
+  theme_bw() 
 
-# ggsave("plots/intPlot_ind.pdf", width = 7.5, height = 6)
+ggsave("plots/intervals_cat2_ind.jpg", width = 15, height = 20)
 
 # why is there a difference beteween KISshock and KISnothing? ####
 
@@ -457,7 +466,6 @@ tmp <- tmp %>%
   select(-c(choice)) %>%
   mutate(propFON = n/10)
 
-# TO DO: find a way to plot this!?
 ggplot(tmp, aes(x=block, y=propFON, group=as.factor(id), col=as.factor(id))) +
   geom_line() +
   facet_wrap(~id, ncol=3)
@@ -520,14 +528,15 @@ tmp <- data_prevOutcome %>%
 
 tmp$choice <- as.factor(tmp$choice)
 tmp$prevOutcome <- as.factor(tmp$prevOutcome)
+tmp$prevChoice <- substring(tmp$prevCat2, 1, 3)
 
 mod1<-glm(choice ~ 1, family = binomial, data = tmp)
 mod2<-glm(choice ~ prevOutcome, family = binomial, data = tmp)
-mod3<-glm(choice ~ prevOutcome + prevCat2, family = binomial, data = tmp)
+mod3<-glm(choice ~ prevOutcome + prevChoice, family = binomial, data = tmp)
 
 anova(mod1, mod2, mod3, test="Chisq") # ns for prevoutcome, sig for prevCat2
 
-## predictor of baselined SCR on current trial: FON/KIS vs outcome vs prevOutcome ####
+## predictor of baselined SCR on current trial: FON/KIS choice vs outcome vs prevOutcome ####
 
 # add prevOutcome column to cleaned_20s which has the 20s mean scrs
 
@@ -539,15 +548,72 @@ cleaned_20s <- right_join(cleaned_20s, tmp)
 cleaned_20s$prevOutcome <- as.factor(cleaned_20s$prevOutcome)
 cleaned_20s$outcome <- as.factor(cleaned_20s$outcome)
 cleaned_20s$choice <- as.factor(cleaned_20s$choice)
+
+cleaned_20s$prevChoice <- substring(cleaned_20s$prevCat2, 1,3 )
 # make models with scr as dv
 
 library(lme4)
 mod1 <- lmer(mean_baselined ~ 1 + (1|id), data = cleaned_20s)
 mod2 <- lmer(mean_baselined ~ choice + (1|id), data = cleaned_20s)
 mod3 <- lmer(mean_baselined ~ choice + prevOutcome + (1|id), data = cleaned_20s)
-mod4 <- lmer(mean_baselined ~ choice + prevOutcome + cat2 + (1|id), data = cleaned_20s)
+mod4 <- lmer(mean_baselined ~ choice + prevOutcome + prevChoice + (1|id), data = cleaned_20s)
 
 anova(mod1, mod2, mod3, mod4)
+
+## see if outcome is good predictor
+
+### for FON trials
+mod1 <- lmer(mean_baselined ~ 1 + (1|id), data = subset(cleaned_20s, choice == 'FON'))
+mod2 <- lmer(mean_baselined ~ outcome + (1|id), data = subset(cleaned_20s, choice == 'FON'))
+anova(mod1, mod2)
+
+### for KIS trials
+mod1 <- lmer(mean_baselined ~ 1 + (1|id), data = subset(cleaned_20s, choice == 'KIS'))
+mod2 <- lmer(mean_baselined ~ outcome + (1|id), data = subset(cleaned_20s, choice == 'KIS'))
+anova(mod1, mod2)
+
+# re-baselined outcome t-test ####
+
+tmp <- cleaned %>%
+  select(c(id, trial, cat, cat2, outcome, label, mean)) %>%
+  group_by(id, trial) %>%
+  mutate(mean_lagged = lag(mean)) %>%
+  ungroup() %>%
+  filter(label == 'outcome')%>%
+  rename(mean_int4 = mean_lagged)
+
+tmp <- tmp %>% mutate(
+  outcome_rebased = mean - mean_int4
+)
+
+#### For each KIS/FON, compare nothing vs shock
+
+outcome_KIS <- subset(tmp, cat2 == 'KISshock' | cat2 == 'KISnothing')
+outcome_FON <- subset(tmp, cat2 == 'FONshock' | cat2 == 'FONnothing')
+
+outcome_KIS <- outcome_KIS %>%
+  group_by(id, cat2) %>%
+  summarise(outcome_rebased = mean(outcome_rebased)) %>%
+  ungroup()
+
+
+outcome_FON <- outcome_FON %>%
+  group_by(id, cat2) %>%
+  summarise(outcome_rebased = mean(outcome_rebased)) %>%
+  ungroup()
+
+library(rstatix)
+
+outcome_KIS %>% wilcox_effsize(outcome_rebased ~ cat2, mu = 0) # moderate
+outcome_FON %>% wilcox_effsize(outcome_rebased ~ cat2, mu = 0) # large
+
+outcome_KIS <- pivot_wider(outcome_KIS, names_from = cat2, values_from = outcome_rebased)
+outcome_FON <- pivot_wider(outcome_FON, names_from = cat2, values_from = outcome_rebased)
+
+## use wilcoxin since we can't get data to be normal even after log transform
+
+wilcox.test(outcome_KIS$KISnothing, outcome_KIS$KISshock, paired=TRUE) 
+wilcox.test(outcome_FON$FONnothing, outcome_FON$FONshock, paired=TRUE) 
 
 # replicating helen's analysis with baselined data ####
 catSummary_20s <- cleaned_20s %>%
@@ -562,5 +628,5 @@ ggplot(catSummary_20s, aes(cat, m)) +
   geom_errorbar(aes(ymin=m-sd/sqrt(n), ymax=m+sd/sqrt(n)), width=.05) + 
   labs(x="Choice", y="Mean SCR", title="SCR by Choice (averaged across trials)")
 
-ggsave("plots/helen_baselined.pdf", width = 7.5, height = 6)
+#ggsave("plots/helen_baselined.pdf", width = 7.5, height = 6)
 
