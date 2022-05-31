@@ -9,12 +9,12 @@ library(here)
 # find the files
 
 files <- list.files(path = here("data_tidy", "5s_ints"), recursive = TRUE,
-                            pattern = "\\.txt$", 
-                            full.names = TRUE)
+                    pattern = "\\.txt$", 
+                    full.names = TRUE)
 
 # Read all the files and create a FileName column to store filenames
 scrdat <- rbindlist(sapply(files, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
+                    use.names = TRUE, idcol = "FileName")
 colnames(scrdat) <- c("id","time", "byte", "label", "mean") # rename columns
 
 scrdat <- scrdat %>%
@@ -103,7 +103,7 @@ outcome <- scrdat %>%
 scrdat<- left_join(scrdat, outcome)
 
 ## get means for 2nd, 3rd, and 4th 5s interval (+ 5s for outcome) following choice ####
-  
+
 postchoice <- scrdat %>%
   group_by(id, trial) %>%
   filter(label2 != "baseline") %>% # only the rows which have interval related means
@@ -172,7 +172,7 @@ catSummary <- cleaned %>% # chosen method
   summarise(mean_sd = sd(mean, na.rm=TRUE),
             mean = mean(mean, na.rm=TRUE)) %>%
   ungroup()
-  
+
 
 indSummary <- cleaned %>%
   group_by(id, cat, subtrial) %>%
@@ -220,7 +220,7 @@ catSummary2 <- cleaned %>%
   summarise(mean_sd = sd(mean, na.rm=TRUE),
             mean = mean(mean, na.rm=TRUE)) %>%
   ungroup() 
-  
+
 
 indSummary2 <- cleaned %>%
   group_by(id, cat2, subtrial) %>%
@@ -229,7 +229,7 @@ indSummary2 <- cleaned %>%
   ungroup()
 
 int_plot2 <- ggplot(catSummary2,
-                   aes(as.factor(subtrial), mean, group = cat2, col = cat2)) +
+                    aes(as.factor(subtrial), mean, group = cat2, col = cat2)) +
   geom_point(size = 3) +
   geom_line() +# +
   #geom_errorbar(aes(ymin=mean_log - mean_log_sd, ymax = mean_log + mean_log_sd), width = .1) 
@@ -417,7 +417,7 @@ tmp <- tmp %>%
 
 tmp <- tmp %>%
   mutate(prop = count/total) # gives prop of shock / total # trials for cat2
-                             # if KISshock has high baselines bc of mostly preceded by shock trials, we should be able to see this
+# if KISshock has high baselines bc of mostly preceded by shock trials, we should be able to see this
 # in the above, props for each cat2 adds up to 1
 
 ggplot(tmp, aes(x=cat2, y=prop, group=interaction(cat2, prevOutcome), col=interaction(cat2, prevOutcome))) +
@@ -614,19 +614,3 @@ outcome_FON <- pivot_wider(outcome_FON, names_from = cat2, values_from = outcome
 
 wilcox.test(outcome_KIS$KISnothing, outcome_KIS$KISshock, paired=TRUE) 
 wilcox.test(outcome_FON$FONnothing, outcome_FON$FONshock, paired=TRUE) 
-
-# replicating helen's analysis with baselined data ####
-catSummary_20s <- cleaned_20s %>%
-  group_by(cat, subtrial) %>%
-  summarise(sd = sd(mean_baselined),
-            m = mean(mean_baselined),
-            n = n()) %>%
-  ungroup()
-
-ggplot(catSummary_20s, aes(cat, m)) + 
-  geom_bar(stat="identity") + 
-  geom_errorbar(aes(ymin=m-sd/sqrt(n), ymax=m+sd/sqrt(n)), width=.05) + 
-  labs(x="Choice", y="Mean SCR", title="SCR by Choice (averaged across trials)")
-
-#ggsave("plots/helen_baselined.pdf", width = 7.5, height = 6)
-
